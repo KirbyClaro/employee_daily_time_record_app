@@ -18,7 +18,21 @@ class AttendanceController:
             dt_out += timedelta(days=1)
             
         delta = dt_out - dt_in
-        return round(delta.total_seconds() / 3600.0, 2)
+        total_hours = delta.total_seconds() / 3600.0
+
+        # Lunch Break Deduction (12:00 PM to 1:00 PM)
+        lunch_start = datetime.combine(dummy_date, time(12, 0))
+        lunch_end = datetime.combine(dummy_date, time(13, 0))
+        
+        # Calculate overlap with the lunch break
+        overlap_start = max(dt_in, lunch_start)
+        overlap_end = min(dt_out, lunch_end)
+        
+        if overlap_start < overlap_end:
+            overlap_hours = (overlap_end - overlap_start).total_seconds() / 3600.0
+            total_hours -= overlap_hours
+
+        return round(total_hours, 2)
 
     @staticmethod
     def time_in(employee_id: int, current_date: date, current_time: time) -> Tuple[bool, str]:
