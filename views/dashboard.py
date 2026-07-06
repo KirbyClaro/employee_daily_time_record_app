@@ -12,7 +12,8 @@ from controllers.attendance_controller import AttendanceController
 from views.employee_list import EmployeeListPage
 from views.attendance_page import AttendancePage
 from views.report_page import ReportPage
-
+from views.report_page import ReportPage
+from views.settings_page import SettingsPage
 
 class DashboardWindow(QMainWindow):
     
