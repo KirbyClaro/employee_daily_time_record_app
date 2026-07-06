@@ -4,15 +4,12 @@ Initializes the SQLite database, sets up the PySide6 QApplication,
 and applies global Material Design typography.
 """
 
-from curses import window
 import sys
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFontDatabase, QFont
-
 from database.database import init_db
 from views.dashboard import DashboardWindow
-# We will uncomment this in the next step once we build the Dashboard view!
-# from views.dashboard import DashboardWindow
+
 
 
 def setup_global_styling(app: QApplication):
