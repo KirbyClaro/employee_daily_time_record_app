@@ -25,7 +25,6 @@ class ReportPage(QWidget):
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
-        # Top Section: Filters
         filter_layout = QHBoxLayout()
         
         self.start_date = QDateEdit()
@@ -59,7 +58,6 @@ class ReportPage(QWidget):
 
         layout.addLayout(filter_layout)
 
-        # Middle Section: Preview Table
         self.table = QTableWidget()
         self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels(["Date", "Day", "Employee ID", "Name", "Department", "Time In", "Time Out", "Hours", "Status"])
@@ -80,7 +78,6 @@ class ReportPage(QWidget):
 
         layout.addWidget(self.table)
 
-        # Bottom Section: Exports
         export_layout = QHBoxLayout()
         
         self.summary_label = QLabel("Showing 0 records.")
@@ -143,14 +140,12 @@ class ReportPage(QWidget):
             self.table.setItem(row_idx, 7, QTableWidgetItem(hours_str))
             self.table.setItem(row_idx, 8, QTableWidgetItem(str(record.get("Status", ""))))
 
-            # Accumulate total hours
             if hours_str and hours_str not in ["--", "None"]:
                 try:
                     total_hours_sum += float(hours_str)
                 except ValueError:
                     pass
 
-        # Append a visual-only Total row to the bottom of the table
         if self.current_data:
             total_row_idx = self.table.rowCount()
             self.table.insertRow(total_row_idx)
@@ -162,7 +157,6 @@ class ReportPage(QWidget):
             total_value = QTableWidgetItem(f"{total_hours_sum:.2f}")
             total_value.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
             
-            # Disable selection on empty cells in the total row
             for col in range(9):
                 if col not in [6, 7]:
                     empty_item = QTableWidgetItem("")
@@ -172,8 +166,17 @@ class ReportPage(QWidget):
             self.table.setItem(total_row_idx, 6, total_label)
             self.table.setItem(total_row_idx, 7, total_value)
 
-        # Update the summary text at the bottom left
-        self.summary_label.setText(f"Showing {len(self.current_data)} records from {start} to {end}.  |  Total Hours: {total_hours_sum:.2f}")
+            # Append the total row to the underlying data list for exports
+            self.current_data.append({
+                "Date": "", "Day": "", "Employee ID": "", "Name": "", 
+                "Department": "", "Time In": "", 
+                "Time Out": "TOTAL HOURS:", 
+                "Hours Worked": f"{total_hours_sum:.2f}", 
+                "Status": ""
+            })
+
+        actual_record_count = len(self.current_data) - 1 if self.current_data else 0
+        self.summary_label.setText(f"Showing {actual_record_count} records from {start} to {end}.  |  Total Hours: {total_hours_sum:.2f}")
 
     def _export_pdf(self):
         if not self.current_data:
