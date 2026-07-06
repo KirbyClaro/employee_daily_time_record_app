@@ -11,7 +11,6 @@ from database.database import init_db
 from views.dashboard import DashboardWindow
 
 
-
 def setup_global_styling(app: QApplication):
     """Applies global Material Design baseline styles and typography."""
     # Try to set a modern default font (Roboto, Segoe UI, or system default)
