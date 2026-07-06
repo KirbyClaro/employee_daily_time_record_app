@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QStackedWidget, QFrame, QGraphicsDropShadowEffect,
     QSpacerItem, QSizePolicy
 )
-from PySide6.QtCore import Qt, QTimer, QSize
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor
 
 from controllers.employee_controller import EmployeeController
@@ -71,7 +71,7 @@ class DashboardWindow(QMainWindow):
         sidebar_layout.setContentsMargins(0, 20, 0, 20)
         sidebar_layout.setSpacing(5)
 
-        # App Logo/Title placeholder
+        # App Logo/Title
         title_label = QLabel("Modern DTR")
         title_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
         title_label.setStyleSheet("color: #1976D2; padding: 0 20px 20px 20px;")
@@ -81,9 +81,11 @@ class DashboardWindow(QMainWindow):
         self.nav_buttons = {}
         nav_items = ["Dashboard", "Employees", "Attendance", "Reports", "Settings"]
         
-        for item in nav_items:
+        for index, item in enumerate(nav_items):
             btn = QPushButton(f"  {item}")
             btn.setCheckable(True)
+            # Route the 'clicked' signal to our navigation method
+            btn.clicked.connect(lambda checked=False, i=index, name=item: self._navigate_to(i, name))
             sidebar_layout.addWidget(btn)
             self.nav_buttons[item] = btn
 
@@ -140,16 +142,36 @@ class DashboardWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         self.stacked_widget.setStyleSheet("background-color: #F5F5F5;")
         
-        # Initialize Dashboard Home Page
+        # Add Pages (Indexes 0 through 4 to match the buttons)
         self.dashboard_page = self._create_dashboard_page()
-        self.stacked_widget.addWidget(self.dashboard_page)
-        
-        # Placeholders for future pages
-        self.stacked_widget.addWidget(QLabel("Employees Page (Coming Soon)"))
-        self.stacked_widget.addWidget(QLabel("Attendance Page (Coming Soon)"))
+        self.stacked_widget.addWidget(self.dashboard_page) # Index 0
+        self.stacked_widget.addWidget(self._create_placeholder("Employee Management (Coming Next)")) # Index 1
+        self.stacked_widget.addWidget(self._create_placeholder("Attendance Tracking")) # Index 2
+        self.stacked_widget.addWidget(self._create_placeholder("Reports & Analytics")) # Index 3
+        self.stacked_widget.addWidget(self._create_placeholder("System Settings")) # Index 4
         
         content_layout.addWidget(self.stacked_widget)
         self.main_layout.addWidget(content_container)
+
+    def _navigate_to(self, index: int, name: str):
+        """Handles sidebar navigation clicks."""
+        # Update button styling to show only the active page
+        for btn_name, btn in self.nav_buttons.items():
+            btn.setChecked(btn_name == name)
+            
+        # Change the visible page in the main area
+        self.stacked_widget.setCurrentIndex(index)
+
+    def _create_placeholder(self, text: str) -> QWidget:
+        """Helper to create a temporary text page for unbuilt features."""
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        lbl = QLabel(text)
+        lbl.setFont(QFont("Segoe UI", 24))
+        lbl.setStyleSheet("color: #BDBDBD;")
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl)
+        return page
 
     def _create_dashboard_page(self) -> QWidget:
         """Builds the main dashboard page with statistics cards."""
@@ -163,11 +185,10 @@ class DashboardWindow(QMainWindow):
         header.setStyleSheet("color: #333333;")
         layout.addWidget(header)
 
-        # Cards Layout (Grid-like using HBox)
+        # Cards Layout
         cards_layout = QHBoxLayout()
         cards_layout.setSpacing(20)
 
-        # Initialize Stat Cards
         self.card_total_emp = self._create_stat_card("Total Employees", "0", "#1976D2")
         self.card_present = self._create_stat_card("Present Today", "0", "#4CAF50")
         self.card_not_timed_in = self._create_stat_card("Not Timed In", "0", "#FF9800")
@@ -179,7 +200,7 @@ class DashboardWindow(QMainWindow):
         cards_layout.addWidget(self.card_not_timed_out)
 
         layout.addLayout(cards_layout)
-        layout.addStretch() # Push everything to the top
+        layout.addStretch()
 
         return page
 
@@ -195,7 +216,6 @@ class DashboardWindow(QMainWindow):
             }}
         """)
         
-        # Add soft shadow
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(15)
         shadow.setColor(QColor(0, 0, 0, 30))
@@ -209,7 +229,6 @@ class DashboardWindow(QMainWindow):
         title_lbl.setFont(QFont("Segoe UI", 11))
         title_lbl.setStyleSheet(f"color: #757575; border: none;")
 
-        # Store the value label as an attribute of the card so we can update it later
         card.value_lbl = QLabel(value)
         card.value_lbl.setFont(QFont("Segoe UI", 28, QFont.Weight.Bold))
         card.value_lbl.setStyleSheet("color: #333333; border: none;")
@@ -223,8 +242,8 @@ class DashboardWindow(QMainWindow):
         """Initializes and starts the real-time clock timer."""
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._update_datetime)
-        self.timer.start(1000) # Update every 1000ms (1 second)
-        self._update_datetime() # Set initial time immediately
+        self.timer.start(1000)
+        self._update_datetime()
 
     def _update_datetime(self):
         """Updates the top bar labels with the current date and time."""
@@ -234,8 +253,6 @@ class DashboardWindow(QMainWindow):
 
     def refresh_statistics(self):
         """Fetches data from controllers and updates the dashboard cards."""
-        # Note: We will implement the actual calculation logic here once 
-        # we have some dummy data. For now, we will query total employees.
         employees = EmployeeController.get_all_employees()
         total_emp = len(employees)
         
@@ -245,7 +262,6 @@ class DashboardWindow(QMainWindow):
         not_timed_out = sum(1 for att, emp in history if not att.time_out)
         not_timed_in = total_emp - present_count
 
-        # Update Card UI
         self.card_total_emp.value_lbl.setText(str(total_emp))
         self.card_present.value_lbl.setText(str(present_count))
         self.card_not_timed_in.value_lbl.setText(str(not_timed_in))
