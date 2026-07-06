@@ -27,7 +27,8 @@ class EmployeeFormDialog(QDialog):
         self.setStyleSheet("""
             QDialog { background-color: #FFFFFF; }
             QLineEdit, QComboBox, QDateEdit {
-                padding: 8px;
+                padding: 4px 8px; 
+                min-height: 24px;  
                 border: 1px solid #CCCCCC;
                 border-radius: 4px;
                 background-color: #F9F9F9;
