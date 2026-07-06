@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QComboBox, QLabel, QDateEdit, QAbstractItemView, QFileDialog
 )
 from PySide6.QtCore import Qt, QDate
+from PySide6.QtGui import QFont
 
 from controllers.attendance_controller import AttendanceController
 from controllers.employee_controller import EmployeeController
@@ -126,6 +127,8 @@ class ReportPage(QWidget):
         self.current_data = ReportController.format_attendance_data(history_records)
 
         self.table.setRowCount(0)
+        total_hours_sum = 0.0
+
         for row_idx, record in enumerate(self.current_data):
             self.table.insertRow(row_idx)
             self.table.setItem(row_idx, 0, QTableWidgetItem(str(record.get("Date", ""))))
@@ -135,10 +138,42 @@ class ReportPage(QWidget):
             self.table.setItem(row_idx, 4, QTableWidgetItem(str(record.get("Department", ""))))
             self.table.setItem(row_idx, 5, QTableWidgetItem(str(record.get("Time In", ""))))
             self.table.setItem(row_idx, 6, QTableWidgetItem(str(record.get("Time Out", ""))))
-            self.table.setItem(row_idx, 7, QTableWidgetItem(str(record.get("Hours Worked", ""))))
+            
+            hours_str = str(record.get("Hours Worked", ""))
+            self.table.setItem(row_idx, 7, QTableWidgetItem(hours_str))
             self.table.setItem(row_idx, 8, QTableWidgetItem(str(record.get("Status", ""))))
 
-        self.summary_label.setText(f"Showing {len(self.current_data)} records from {start} to {end}.")
+            # Accumulate total hours
+            if hours_str and hours_str not in ["--", "None"]:
+                try:
+                    total_hours_sum += float(hours_str)
+                except ValueError:
+                    pass
+
+        # Append a visual-only Total row to the bottom of the table
+        if self.current_data:
+            total_row_idx = self.table.rowCount()
+            self.table.insertRow(total_row_idx)
+            
+            total_label = QTableWidgetItem("TOTAL HOURS:")
+            total_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+            total_label.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            
+            total_value = QTableWidgetItem(f"{total_hours_sum:.2f}")
+            total_value.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+            
+            # Disable selection on empty cells in the total row
+            for col in range(9):
+                if col not in [6, 7]:
+                    empty_item = QTableWidgetItem("")
+                    empty_item.setFlags(Qt.ItemFlag.NoItemFlags)
+                    self.table.setItem(total_row_idx, col, empty_item)
+            
+            self.table.setItem(total_row_idx, 6, total_label)
+            self.table.setItem(total_row_idx, 7, total_value)
+
+        # Update the summary text at the bottom left
+        self.summary_label.setText(f"Showing {len(self.current_data)} records from {start} to {end}.  |  Total Hours: {total_hours_sum:.2f}")
 
     def _export_pdf(self):
         if not self.current_data:
