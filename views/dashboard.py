@@ -11,6 +11,7 @@ from controllers.employee_controller import EmployeeController
 from controllers.attendance_controller import AttendanceController
 from views.employee_list import EmployeeListPage
 from views.attendance_page import AttendancePage
+from views.report_page import ReportPage
 
 
 class DashboardWindow(QMainWindow):
@@ -111,7 +112,9 @@ class DashboardWindow(QMainWindow):
         self.attendance_page = AttendancePage()
         self.stacked_widget.addWidget(self.attendance_page)
         
-        self.stacked_widget.addWidget(QLabel("Reports Page (Coming Soon)"))
+        self.reports_page = ReportPage()
+        self.stacked_widget.addWidget(self.reports_page)
+        
         self.stacked_widget.addWidget(QLabel("Settings Page (Coming Soon)"))
         
         content_layout.addWidget(self.stacked_widget)
@@ -120,12 +123,13 @@ class DashboardWindow(QMainWindow):
     def _switch_page(self, index: int, active_name: str):
         self.stacked_widget.setCurrentIndex(index)
         
-        # Refresh combo boxes/data when switching tabs
         if active_name == "Attendance":
             self.attendance_page.load_employees_dropdown()
             self.attendance_page.load_history()
         elif active_name == "Employees":
             self.employees_page.load_employees()
+        elif active_name == "Reports":
+            self.reports_page.load_employees_dropdown()
             
         for name, btn in self.nav_buttons.items():
             if name != active_name:
