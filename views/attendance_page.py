@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, 
-    QComboBox, QLabel, QDialog, QFormLayout, QDateEdit, QTimeEdit, QLineEdit, QAbstractItemView
+    QComboBox, QLabel, QDialog, QFormLayout, QDateEdit, QTimeEdit, 
+    QLineEdit, QAbstractItemView, QInputDialog
 )
 from PySide6.QtCore import Qt, QDate, QTime
 from datetime import date, datetime
@@ -100,7 +101,6 @@ class AttendancePage(QWidget):
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
 
-        # Toolbar
         toolbar_layout = QHBoxLayout()
         
         self.emp_combo = QComboBox()
@@ -110,16 +110,19 @@ class AttendancePage(QWidget):
         self.btn_time_in = QPushButton("Time In (Now)")
         self.btn_time_out = QPushButton("Time Out (Now)")
         self.btn_manual = QPushButton("Manual Entry (Past)")
+        self.btn_delete = QPushButton("Delete Selected")
         self.btn_refresh = QPushButton("Refresh")
 
         self.btn_time_in.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #45A049; }")
         self.btn_time_out.setStyleSheet("QPushButton { background-color: #F44336; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #E53935; }")
         self.btn_manual.setStyleSheet("QPushButton { background-color: #FF9800; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #FB8C00; }")
+        self.btn_delete.setStyleSheet("QPushButton { background-color: #D32F2F; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #B71C1C; }")
         self.btn_refresh.setStyleSheet("QPushButton { background-color: #9E9E9E; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #757575; }")
 
         self.btn_time_in.clicked.connect(self._auto_time_in)
         self.btn_time_out.clicked.connect(self._auto_time_out)
         self.btn_manual.clicked.connect(self._manual_entry)
+        self.btn_delete.clicked.connect(self._delete_record)
         self.btn_refresh.clicked.connect(self.load_history)
 
         toolbar_layout.addWidget(QLabel("Select Employee:"))
@@ -128,12 +131,12 @@ class AttendancePage(QWidget):
         toolbar_layout.addWidget(self.btn_time_in)
         toolbar_layout.addWidget(self.btn_time_out)
         toolbar_layout.addWidget(self.btn_manual)
+        toolbar_layout.addWidget(self.btn_delete)
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.btn_refresh)
 
         layout.addLayout(toolbar_layout)
 
-        # History Table
         self.table = QTableWidget()
         self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels(["Date", "Day", "Employee Name", "Time In", "Time Out", "Total Hours", "Status"])
@@ -176,7 +179,10 @@ class AttendancePage(QWidget):
             t_out = att.time_out.strftime("%I:%M %p") if att.time_out else "--:--"
             hrs = str(att.total_hours) if att.total_hours else "--"
             
-            self.table.setItem(row_idx, 0, QTableWidgetItem(att.attendance_date.strftime("%Y-%m-%d")))
+            date_item = QTableWidgetItem(att.attendance_date.strftime("%Y-%m-%d"))
+            date_item.setData(Qt.ItemDataRole.UserRole, att.id)
+            
+            self.table.setItem(row_idx, 0, date_item)
             self.table.setItem(row_idx, 1, QTableWidgetItem(att.day))
             self.table.setItem(row_idx, 2, QTableWidgetItem(full_name))
             self.table.setItem(row_idx, 3, QTableWidgetItem(t_in))
@@ -217,3 +223,36 @@ class AttendancePage(QWidget):
         dialog = ManualAttendanceDialog(self, emp_id, emp_name)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_history()
+
+    def _delete_record(self):
+        selected_rows = self.table.selectedItems()
+        if not selected_rows:
+            QMessageBox.warning(self, "Selection Required", "Please select a record to delete.")
+            return
+
+        record_id = self.table.item(selected_rows[0].row(), 0).data(Qt.ItemDataRole.UserRole)
+
+        password, ok = QInputDialog.getText(
+            self, 
+            "Admin Authorization", 
+            "Enter deletion password:", 
+            QLineEdit.EchoMode.Password
+        )
+
+        if ok:
+            if password == "DTR2026":
+                reply = QMessageBox.question(
+                    self, 
+                    "Confirm Deletion", 
+                    "Are you sure you want to delete this attendance record?", 
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    success, msg = AttendanceController.delete_attendance(record_id)
+                    if success:
+                        QMessageBox.information(self, "Success", msg)
+                        self.load_history()
+                    else:
+                        QMessageBox.warning(self, "Error", msg)
+            else:
+                QMessageBox.warning(self, "Access Denied", "Incorrect password.")
