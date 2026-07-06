@@ -1,0 +1,15 @@
+# GUI Framework
+PySide6==6.7.0
+
+# Database and ORM
+SQLAlchemy==2.0.30
+
+# Data Manipulation and Export
+pandas==2.2.2
+openpyxl==3.1.2
+
+# PDF Generation
+reportlab==4.2.0
+
+# Date and Time Utilities
+python-dateutil==2.9.0.post0
