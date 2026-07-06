@@ -173,7 +173,7 @@ class EmployeeListPage(QWidget):
         """Instant search triggered as the user types."""
         self.load_employees(text)
 
-    def _get_selected_employee_id(() -> int): # Helper to grab selected DB ID
+    def _get_selected_employee_id(self) -> int:
         pass
 
     def _get_selected_db_id(self):
