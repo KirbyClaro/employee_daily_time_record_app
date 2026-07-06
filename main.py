@@ -4,11 +4,13 @@ Initializes the SQLite database, sets up the PySide6 QApplication,
 and applies global Material Design typography.
 """
 
+from curses import window
 import sys
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFontDatabase, QFont
 
 from database.database import init_db
+from views.dashboard import DashboardWindow
 # We will uncomment this in the next step once we build the Dashboard view!
 # from views.dashboard import DashboardWindow
 
@@ -63,9 +65,9 @@ def main():
     print("Application boot sequence complete. Ready for UI!")
 
     # 4. Launch the Main Dashboard (Commented out until we create views/dashboard.py)
-    # window = DashboardWindow()
-    # window.show()
-    # sys.exit(app.exec())
+    window = DashboardWindow()
+    window.show()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
