@@ -1,3 +1,9 @@
+"""
+Main Dashboard View.
+Provides the main application shell, sidebar navigation, top bar with real-time clock,
+and the home dashboard with Material Design statistics cards.
+"""
+
 from datetime import date, datetime
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
@@ -12,8 +18,8 @@ from controllers.attendance_controller import AttendanceController
 from views.employee_list import EmployeeListPage
 from views.attendance_page import AttendancePage
 from views.report_page import ReportPage
-from views.report_page import ReportPage
 from views.settings_page import SettingsPage
+
 
 class DashboardWindow(QMainWindow):
     
@@ -116,7 +122,8 @@ class DashboardWindow(QMainWindow):
         self.reports_page = ReportPage()
         self.stacked_widget.addWidget(self.reports_page)
         
-        self.stacked_widget.addWidget(QLabel("Settings Page (Coming Soon)"))
+        self.settings_page = SettingsPage()
+        self.stacked_widget.addWidget(self.settings_page)
         
         content_layout.addWidget(self.stacked_widget)
         self.main_layout.addWidget(content_container)
