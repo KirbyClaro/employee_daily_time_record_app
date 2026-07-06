@@ -1,9 +1,3 @@
-"""
-Main Dashboard View.
-Provides the main application shell, sidebar navigation, top bar with real-time clock,
-and the home dashboard with Material Design statistics cards.
-"""
-
 from datetime import date, datetime
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
@@ -15,6 +9,7 @@ from PySide6.QtGui import QFont, QColor
 
 from controllers.employee_controller import EmployeeController
 from controllers.attendance_controller import AttendanceController
+from controllers.settings_controller import SettingsController
 from views.employee_list import EmployeeListPage
 from views.attendance_page import AttendancePage
 from views.report_page import ReportPage
@@ -53,10 +48,14 @@ class DashboardWindow(QMainWindow):
         sidebar_layout.setContentsMargins(0, 20, 0, 20)
         sidebar_layout.setSpacing(5)
 
-        title_label = QLabel("Modern DTR")
-        title_label.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #1976D2; padding: 0 20px 20px 20px;")
-        sidebar_layout.addWidget(title_label)
+        settings = SettingsController.get_current_settings()
+        company_name = settings.company_name if settings else "Modern DTR"
+
+        self.title_label = QLabel(company_name)
+        self.title_label.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        self.title_label.setStyleSheet("color: #1976D2; padding: 0 20px 20px 20px;")
+        self.title_label.setWordWrap(True) 
+        sidebar_layout.addWidget(self.title_label)
 
         self.nav_buttons = {}
         nav_items = ["Dashboard", "Employees", "Attendance", "Reports", "Settings"]
@@ -123,6 +122,7 @@ class DashboardWindow(QMainWindow):
         self.stacked_widget.addWidget(self.reports_page)
         
         self.settings_page = SettingsPage()
+        self.settings_page.company_name_changed.connect(self._update_sidebar_title)
         self.stacked_widget.addWidget(self.settings_page)
         
         content_layout.addWidget(self.stacked_widget)
@@ -144,6 +144,9 @@ class DashboardWindow(QMainWindow):
                 btn.setChecked(False)
             else:
                 btn.setChecked(True)
+
+    def _update_sidebar_title(self, new_name: str):
+        self.title_label.setText(new_name)
 
     def _create_dashboard_page(self) -> QWidget:
         page = QWidget()

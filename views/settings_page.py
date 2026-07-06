@@ -3,16 +3,18 @@ from PySide6.QtWidgets import (
     QLabel, QLineEdit, QGroupBox, QFormLayout, 
     QMessageBox, QFileDialog, QCheckBox
 )
-from PySide6.QtCore import Qt, QSettings
+from PySide6.QtCore import Qt, QSettings, Signal
 from PySide6.QtGui import QFont
 
 from controllers.settings_controller import SettingsController
 
 
 class SettingsPage(QWidget):
+    
+    company_name_changed = Signal(str)
+
     def __init__(self):
         super().__init__()
-        # PySide6 local settings manager for UI preferences
         self.local_prefs = QSettings("ModernDTR", "Preferences")
         self._setup_ui()
         self._load_current_data()
@@ -27,7 +29,6 @@ class SettingsPage(QWidget):
         title.setStyleSheet("color: #333333;")
         layout.addWidget(title)
 
-        # 1. Company Profile Section
         profile_group = QGroupBox("Company Profile")
         profile_group.setStyleSheet(self._groupbox_style())
         profile_layout = QFormLayout(profile_group)
@@ -44,7 +45,6 @@ class SettingsPage(QWidget):
         profile_layout.addRow("", self.btn_save_profile)
         layout.addWidget(profile_group)
 
-        # 2. Security Section
         security_group = QGroupBox("Security & Access")
         security_group.setStyleSheet(self._groupbox_style())
         security_layout = QFormLayout(security_group)
@@ -67,7 +67,6 @@ class SettingsPage(QWidget):
         security_layout.addRow("", self.btn_change_pass)
         layout.addWidget(security_group)
 
-        # 3. Attendance Preferences Section
         pref_group = QGroupBox("Attendance Rules")
         pref_group.setStyleSheet(self._groupbox_style())
         pref_layout = QVBoxLayout(pref_group)
@@ -80,7 +79,6 @@ class SettingsPage(QWidget):
         pref_layout.addWidget(self.lunch_toggle)
         layout.addWidget(pref_group)
 
-        # 4. Database Management Section
         db_group = QGroupBox("Database Management")
         db_group.setStyleSheet(self._groupbox_style())
         db_layout = QVBoxLayout(db_group)
@@ -100,7 +98,6 @@ class SettingsPage(QWidget):
 
         layout.addStretch()
 
-    # --- Styling Helpers ---
     def _groupbox_style(self):
         return """
             QGroupBox { font-weight: bold; font-size: 14px; border: 1px solid #E0E0E0; border-radius: 6px; margin-top: 10px; background-color: #FFFFFF; }
@@ -113,14 +110,11 @@ class SettingsPage(QWidget):
     def _secondary_btn_style(self):
         return "background-color: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold;"
 
-    # --- Logic ---
     def _load_current_data(self):
-        # Load DB Settings
         settings = SettingsController.get_current_settings()
         if settings:
             self.company_name_input.setText(settings.company_name)
         
-        # Load Local UI Preferences
         lunch_pref = self.local_prefs.value("auto_lunch_deduct", True, type=bool)
         self.lunch_toggle.setChecked(lunch_pref)
 
@@ -133,6 +127,7 @@ class SettingsPage(QWidget):
         success, msg = SettingsController.update_company_name(new_name)
         if success:
             QMessageBox.information(self, "Success", msg)
+            self.company_name_changed.emit(new_name)
         else:
             QMessageBox.warning(self, "Error", msg)
 
