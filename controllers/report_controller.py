@@ -13,18 +13,22 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 
-
 class ReportController:
     """Controller class for generating and exporting reports."""
 
     @staticmethod
     def format_attendance_data(history_records: List[Any]) -> List[Dict[str, Any]]:
         """
-        Converts the raw SQLAlchemy join results (Attendance, Employee) 
+        Converts the raw SQLAlchemy join results (Attendance, Employee)
         into a clean list of dictionaries for easier exporting.
         """
         formatted_data = []
         for attendance, employee in history_records:
+            
+            # Format time out and hours properly for unfinished shifts at the data source
+            t_out = attendance.time_out.strftime("%I:%M %p") if attendance.time_out else "--:--"
+            hrs = str(attendance.total_hours) if attendance.total_hours else "--"
+
             formatted_data.append({
                 "Date": attendance.attendance_date.strftime("%Y-%m-%d"),
                 "Day": attendance.day,
@@ -32,8 +36,8 @@ class ReportController:
                 "Name": f"{employee.first_name} {employee.last_name}",
                 "Department": employee.department or "N/A",
                 "Time In": attendance.time_in.strftime("%I:%M %p") if attendance.time_in else "--:--",
-                "Time Out": attendance.time_out.strftime("%I:%M %p") if attendance.time_out else "--:--",
-                "Hours Worked": attendance.total_hours if attendance.total_hours else 0.0,
+                "Time Out": t_out,
+                "Hours Worked": hrs,
                 "Status": attendance.attendance_status or "Unknown"
             })
         return formatted_data
@@ -72,7 +76,7 @@ class ReportController:
         """Exports data to a styled PDF document using ReportLab."""
         try:
             ReportController._ensure_directory_exists(filepath)
-            
+
             # Setup the PDF Document (Landscape for wide tables)
             doc = SimpleDocTemplate(filepath, pagesize=landscape(letter))
             elements = []
@@ -97,7 +101,9 @@ class ReportController:
 
             # Create Table and apply Material Design inspired styling
             table = Table(table_data)
-            table.setStyle(TableStyle([
+            
+            # Base Style
+            style_commands = [
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1976D2")),  # Material Blue Header
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -108,11 +114,22 @@ class ReportController:
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E0E0E0")),  # Soft Borders
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
-            ]))
-            
+            ]
+
+            # If it is, make it bold and distinct in the PDF!
+            if data and data[-1].get("Time Out", "") == "TOTAL HOURS:":
+                last_row_idx = len(table_data) - 1
+                style_commands.extend([
+                    ('FONTNAME', (0, last_row_idx), (-1, last_row_idx), 'Helvetica-Bold'),
+                    ('BACKGROUND', (0, last_row_idx), (-1, last_row_idx), colors.HexColor("#E0E0E0")),
+                    ('ALIGN', (6, last_row_idx), (6, last_row_idx), 'RIGHT'), # Align the "TOTAL HOURS:" text
+                ])
+
+            table.setStyle(TableStyle(style_commands))
+
             elements.append(table)
             doc.build(elements)
             return True, f"Successfully exported PDF to {filepath}"
-            
+
         except Exception as e:
             return False, f"Failed to export PDF: {str(e)}"
