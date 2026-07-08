@@ -12,14 +12,13 @@ from controllers.employee_controller import EmployeeController
 
 
 class ManualAttendanceDialog(QDialog):
-    def __init__(self, parent=None, employee_id=None, employee_name=""):
+    def __init__(self, parent=None, initial_employee_id=None):
         super().__init__(parent)
-        self.employee_id = employee_id
         self.setWindowTitle("Manual Attendance Entry")
         self.setFixedSize(400, 350)
         self.setStyleSheet("""
             QDialog { background-color: #FFFFFF; }
-            QLineEdit, QDateEdit, QTimeEdit {
+            QLineEdit, QDateEdit, QTimeEdit, QComboBox {
                 padding: 4px 8px; min-height: 24px; border: 1px solid #CCCCCC;
                 border-radius: 4px; background-color: #F9F9F9; font-size: 13px;
                 color: #333333;
@@ -30,7 +29,19 @@ class ManualAttendanceDialog(QDialog):
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()
 
-        self.emp_label = QLabel(employee_name)
+        # Replaced static label with a ComboBox
+        self.emp_combo = QComboBox()
+        employees = EmployeeController.get_all_employees()
+        for emp in employees:
+            full_name = f"{emp.first_name} {emp.last_name}"
+            self.emp_combo.addItem(f"{emp.employee_id} - {full_name}", emp.id)
+            
+        # Pre-select the employee if one was selected in the main window
+        if initial_employee_id:
+            index = self.emp_combo.findData(initial_employee_id)
+            if index >= 0:
+                self.emp_combo.setCurrentIndex(index)
+
         self.date_input = QDateEdit()
         self.date_input.setCalendarPopup(True)
         self.date_input.setDate(QDate.currentDate())
@@ -44,7 +55,7 @@ class ManualAttendanceDialog(QDialog):
         self.admin_pass_input = QLineEdit()
         self.admin_pass_input.setEchoMode(QLineEdit.EchoMode.Password)
 
-        form_layout.addRow("Employee:", self.emp_label)
+        form_layout.addRow("Employee:", self.emp_combo)
         form_layout.addRow("Date:", self.date_input)
         form_layout.addRow("Time In:", self.time_in_input)
         form_layout.addRow("Time Out:", self.time_out_input)
@@ -72,16 +83,19 @@ class ManualAttendanceDialog(QDialog):
             QMessageBox.warning(self, "Access Denied", "Incorrect Admin Password. (Try 'admin' or 'DTR2026')")
             return
 
+        selected_emp_id = self.emp_combo.currentData()
         selected_date = self.date_input.date().toPython()
         t_in = self.time_in_input.time().toPython()
         t_out = self.time_out_input.time().toPython()
 
-        success_in, msg_in = AttendanceController.time_in(self.employee_id, selected_date, t_in)
+        # Execute Time In
+        success_in, msg_in = AttendanceController.time_in(selected_emp_id, selected_date, t_in)
         if not success_in:
             QMessageBox.warning(self, "Error", msg_in)
             return
 
-        success_out, msg_out = AttendanceController.time_out(self.employee_id, selected_date, t_out)
+        # Execute Time Out
+        success_out, msg_out = AttendanceController.time_out(selected_emp_id, selected_date, t_out)
         if not success_out:
             QMessageBox.warning(self, "Error", msg_out)
             return
@@ -218,10 +232,8 @@ class AttendancePage(QWidget):
 
     def _manual_entry(self):
         emp_id = self._get_selected_emp_id()
-        emp_name = self.emp_combo.currentText()
-        if not emp_id: return
-        
-        dialog = ManualAttendanceDialog(self, emp_id, emp_name)
+        # Pass the ID so the popup defaults to it, but now the user can change it inside!
+        dialog = ManualAttendanceDialog(self, initial_employee_id=emp_id)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_history()
 
