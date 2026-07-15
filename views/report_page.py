@@ -29,7 +29,8 @@ class ReportPage(QWidget):
         
         self.start_date = QDateEdit()
         self.start_date.setCalendarPopup(True)
-        self.start_date.setDate(QDate.currentDate().addDays(-7))
+        # We removed the dynamic 7-day lookback and hardcoded June 29, 2026
+        self.start_date.setDate(QDate(2026, 6, 29))
         self.start_date.setStyleSheet("padding: 8px; border: 1px solid #CCC; border-radius: 4px;")
 
         self.end_date = QDateEdit()
@@ -134,9 +135,14 @@ class ReportPage(QWidget):
             self.table.setItem(row_idx, 3, QTableWidgetItem(str(record.get("Name", ""))))
             self.table.setItem(row_idx, 4, QTableWidgetItem(str(record.get("Department", ""))))
             self.table.setItem(row_idx, 5, QTableWidgetItem(str(record.get("Time In", ""))))
-            self.table.setItem(row_idx, 6, QTableWidgetItem(str(record.get("Time Out", ""))))
             
+            time_out_str = str(record.get("Time Out", ""))
             hours_str = str(record.get("Hours Worked", ""))
+            
+            if time_out_str in ["--:--", "", "None"]:
+                hours_str = "--"
+                
+            self.table.setItem(row_idx, 6, QTableWidgetItem(time_out_str))
             self.table.setItem(row_idx, 7, QTableWidgetItem(hours_str))
             self.table.setItem(row_idx, 8, QTableWidgetItem(str(record.get("Status", ""))))
 
@@ -166,7 +172,6 @@ class ReportPage(QWidget):
             self.table.setItem(total_row_idx, 6, total_label)
             self.table.setItem(total_row_idx, 7, total_value)
 
-            # Append the total row to the underlying data list for exports
             self.current_data.append({
                 "Date": "", "Day": "", "Employee ID": "", "Name": "", 
                 "Department": "", "Time In": "", 
