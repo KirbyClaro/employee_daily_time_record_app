@@ -11,6 +11,88 @@ from controllers.attendance_controller import AttendanceController
 from controllers.employee_controller import EmployeeController
 
 
+class EditAttendanceDialog(QDialog):
+    def __init__(self, parent=None, record_id=None, emp_name="", date_str="", time_in_str="", time_out_str=""):
+        super().__init__(parent)
+        self.record_id = record_id
+        self.setWindowTitle("Edit Attendance Record")
+        self.setFixedSize(400, 350)
+        self.setStyleSheet("""
+            QDialog { background-color: #FFFFFF; }
+            QLineEdit, QDateEdit, QTimeEdit, QComboBox {
+                padding: 4px 8px; min-height: 24px; border: 1px solid #CCCCCC;
+                border-radius: 4px; background-color: #F9F9F9; font-size: 13px;
+                color: #333333;
+            }
+            QLabel { font-weight: bold; color: #555555; }
+        """)
+
+        layout = QVBoxLayout(self)
+        form_layout = QFormLayout()
+
+        self.emp_label = QLabel(emp_name)
+        self.emp_label.setStyleSheet("color: #1976D2; font-size: 14px;")
+        
+        self.date_input = QDateEdit()
+        self.date_input.setCalendarPopup(True)
+        self.date_input.setDate(QDate.fromString(date_str, "yyyy-MM-dd"))
+
+        self.time_in_input = QTimeEdit()
+        if time_in_str and time_in_str != "--:--":
+            t_in = datetime.strptime(time_in_str, "%I:%M %p")
+            self.time_in_input.setTime(QTime(t_in.hour, t_in.minute))
+        else:
+            self.time_in_input.setTime(QTime(8, 0))
+        
+        self.time_out_input = QTimeEdit()
+        if time_out_str and time_out_str != "--:--":
+            t_out = datetime.strptime(time_out_str, "%I:%M %p")
+            self.time_out_input.setTime(QTime(t_out.hour, t_out.minute))
+        else:
+            self.time_out_input.setTime(QTime(17, 0))
+
+        self.admin_pass_input = QLineEdit()
+        self.admin_pass_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        form_layout.addRow("Employee:", self.emp_label)
+        form_layout.addRow("Date:", self.date_input)
+        form_layout.addRow("Time In:", self.time_in_input)
+        form_layout.addRow("Time Out:", self.time_out_input)
+        form_layout.addRow("Admin Password:", self.admin_pass_input)
+
+        layout.addLayout(form_layout)
+
+        btn_layout = QHBoxLayout()
+        self.save_btn = QPushButton("Update Record")
+        self.save_btn.setStyleSheet("background-color: #00897B; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold;")
+        self.save_btn.clicked.connect(self._update_record)
+        
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.setStyleSheet("background-color: #9E9E9E; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold;")
+        self.cancel_btn.clicked.connect(self.reject)
+
+        btn_layout.addWidget(self.cancel_btn)
+        btn_layout.addWidget(self.save_btn)
+        layout.addLayout(btn_layout)
+
+    def _update_record(self):
+        admin_pass = self.admin_pass_input.text()
+        
+        # We package the new data strictly into a dictionary to pass to our controller
+        new_data = {
+            "attendance_date": self.date_input.date().toPython(),
+            "time_in": self.time_in_input.time().toPython(),
+            "time_out": self.time_out_input.time().toPython()
+        }
+        
+        success, msg = AttendanceController.update_attendance(self.record_id, admin_pass, new_data)
+        if success:
+            QMessageBox.information(self, "Success", msg)
+            self.accept()
+        else:
+            QMessageBox.warning(self, "Error", msg)
+
+
 class ManualAttendanceDialog(QDialog):
     def __init__(self, parent=None, initial_employee_id=None):
         super().__init__(parent)
@@ -29,14 +111,12 @@ class ManualAttendanceDialog(QDialog):
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()
 
-        # Replaced static label with a ComboBox
         self.emp_combo = QComboBox()
         employees = EmployeeController.get_all_employees()
         for emp in employees:
             full_name = f"{emp.first_name} {emp.last_name}"
             self.emp_combo.addItem(f"{emp.employee_id} - {full_name}", emp.id)
             
-        # Pre-select the employee if one was selected in the main window
         if initial_employee_id:
             index = self.emp_combo.findData(initial_employee_id)
             if index >= 0:
@@ -88,13 +168,11 @@ class ManualAttendanceDialog(QDialog):
         t_in = self.time_in_input.time().toPython()
         t_out = self.time_out_input.time().toPython()
 
-        # Execute Time In
         success_in, msg_in = AttendanceController.time_in(selected_emp_id, selected_date, t_in)
         if not success_in:
             QMessageBox.warning(self, "Error", msg_in)
             return
 
-        # Execute Time Out
         success_out, msg_out = AttendanceController.time_out(selected_emp_id, selected_date, t_out)
         if not success_out:
             QMessageBox.warning(self, "Error", msg_out)
@@ -122,21 +200,25 @@ class AttendancePage(QWidget):
         self.emp_combo.setMinimumWidth(250)
         self.emp_combo.setStyleSheet("padding: 8px; border: 1px solid #CCC; border-radius: 4px; font-size: 13px;")
         
-        self.btn_time_in = QPushButton("Time In (Now)")
-        self.btn_time_out = QPushButton("Time Out (Now)")
-        self.btn_manual = QPushButton("Manual Entry (Past)")
-        self.btn_delete = QPushButton("Delete Selected")
+        # Shortened the labels to prevent text squishing
+        self.btn_time_in = QPushButton("Time In")
+        self.btn_time_out = QPushButton("Time Out")
+        self.btn_manual = QPushButton("Manual Entry")
+        self.btn_edit = QPushButton("Edit")
+        self.btn_delete = QPushButton("Delete")
         self.btn_refresh = QPushButton("Refresh")
 
         self.btn_time_in.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #45A049; }")
         self.btn_time_out.setStyleSheet("QPushButton { background-color: #F44336; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #E53935; }")
         self.btn_manual.setStyleSheet("QPushButton { background-color: #FF9800; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #FB8C00; }")
+        self.btn_edit.setStyleSheet("QPushButton { background-color: #00897B; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #00796B; }")
         self.btn_delete.setStyleSheet("QPushButton { background-color: #D32F2F; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #B71C1C; }")
         self.btn_refresh.setStyleSheet("QPushButton { background-color: #9E9E9E; color: white; padding: 8px 16px; border-radius: 4px; font-weight: bold; } QPushButton:hover { background-color: #757575; }")
 
         self.btn_time_in.clicked.connect(self._auto_time_in)
         self.btn_time_out.clicked.connect(self._auto_time_out)
         self.btn_manual.clicked.connect(self._manual_entry)
+        self.btn_edit.clicked.connect(self._edit_selected)
         self.btn_delete.clicked.connect(self._delete_record)
         self.btn_refresh.clicked.connect(self.load_history)
 
@@ -146,6 +228,7 @@ class AttendancePage(QWidget):
         toolbar_layout.addWidget(self.btn_time_in)
         toolbar_layout.addWidget(self.btn_time_out)
         toolbar_layout.addWidget(self.btn_manual)
+        toolbar_layout.addWidget(self.btn_edit)
         toolbar_layout.addWidget(self.btn_delete)
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.btn_refresh)
@@ -232,8 +315,27 @@ class AttendancePage(QWidget):
 
     def _manual_entry(self):
         emp_id = self._get_selected_emp_id()
-        # Pass the ID so the popup defaults to it, but now the user can change it inside!
         dialog = ManualAttendanceDialog(self, initial_employee_id=emp_id)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.load_history()
+
+    def _edit_selected(self):
+        selected_rows = self.table.selectedItems()
+        if not selected_rows:
+            QMessageBox.warning(self, "Selection Required", "Please select a record to edit.")
+            return
+
+        row = selected_rows[0].row()
+        
+        # Scrape the existing data straight off the selected row in the table
+        record_id = self.table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+        date_str = self.table.item(row, 0).text()
+        emp_name = self.table.item(row, 2).text()
+        time_in_str = self.table.item(row, 3).text()
+        time_out_str = self.table.item(row, 4).text()
+
+        # Open the new Edit Dialog and feed it the existing data
+        dialog = EditAttendanceDialog(self, record_id, emp_name, date_str, time_in_str, time_out_str)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_history()
 
